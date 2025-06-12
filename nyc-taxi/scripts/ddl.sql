@@ -1,20 +1,10 @@
 -- =================================================================
---  Materialize Schema for NYC Yellow Taxi Data
--- =================================================================
---  This script prepares the database for ingesting the taxi trip
---  records. It ensures that the target table is clean and then
---  creates it with a schema matching the source Parquet file.
+--  Materialize & NYC Yellow Taxi Data
 -- =================================================================
 
--- Drop the table if it already exists to ensure a fresh start.
--- This makes the script idempotent, meaning it can be run multiple
--- times without causing errors.
-DROP TABLE IF EXISTS yellow_taxi_trips;
-
--- Create the table to hold the raw NYC yellow taxi trip data.
--- This table will be the target for the SQL INSERT statements
--- from our Java data feeder application.
-CREATE TABLE yellow_taxi_trips (
+-- Raw table to match the full NYC yellow taxi trip data, if useful
+DROP TABLE IF EXISTS yellow_taxi_trips_direct;
+CREATE TABLE yellow_taxi_trips_direct (
     VendorID                BIGINT,
     tpep_pickup_datetime    TIMESTAMP,
     tpep_dropoff_datetime   TIMESTAMP,
@@ -36,13 +26,17 @@ CREATE TABLE yellow_taxi_trips (
     Airport_fee             DOUBLE PRECISION
 );
 
--- Create kafka CONNECTION with easy defaults
+
+-- For Streaming demo using Kafka:
+
+
+-- Simple Kafka CONNECTION that works for us; no auth, no ssl! demo!
 CREATE CONNECTION yellow_taxi_trips_kafka TO KAFKA (
     BROKER 'kafka-nyc-taxi:29092',
     SECURITY PROTOCOL = 'PLAINTEXT'
 );
 
--- SOURCE
+-- SOURCE definition
 DROP SOURCE IF EXISTS materialize.public.yellow_taxi_trips_source CASCADE;
 CREATE SOURCE materialize.public.yellow_taxi_trips_source
 IN CLUSTER quickstart
