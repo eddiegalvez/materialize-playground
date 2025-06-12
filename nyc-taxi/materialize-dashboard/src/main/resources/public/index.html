@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time NYC Taxi Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .chart-container {
+            width: 80%;
+            max-width: 900px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+    </style>
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="chart-container">
+        <h1>Busiest Taxi Pickup Locations (1s update)</h1>
+        <canvas id="busiestLocationsChart"></canvas>
+    </div>
+
+    <div class="chart-container" style="margin-top: 32px;">
+        <h1>Most Tipped Trips (Top 10)</h1>
+        <div style="overflow-x:auto;">
+            <table id="mostTippedTripsTable" style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th>Pickup Datetime</th>
+                        <th>Dropoff Datetime</th>
+                        <th>Passenger Count</th>
+                        <th>Trip Distance</th>
+                        <th>Fare Amount</th>
+                        <th>Tip Amount</th>
+                        <th>Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('busiestLocationsChart').getContext('2d');
+
+        // Initialize the chart with empty data
+        const myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [], // e.g., ['Location 132', 'Location 237']
+                datasets: [{
+                    label: 'Number of Trips',
+                    data: [], // e.g., [1500, 1200]
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Makes it a horizontal bar chart
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                },
+                animation: {
+                    duration: 400 // Smooth animation between updates
+                }
+            }
+        });
+
+        // Establish WebSocket connection
+        const socket = new WebSocket('ws://localhost:7070/dashboard-data');
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            console.log("Received update:", data);
+
+             // labels/data used for bar chart (busy locations)
+            if (data.labels && data.data) {
+                myChart.data.labels = data.labels;
+                myChart.data.datasets[0].data = data.data;
+                myChart.update();
+            }
+
+            // mostTippedTrips used for table of most tipped trips
+            if (data.mostTippedTrips) {
+                updateMostTippedTripsTable(data.mostTippedTrips);
+            }
+
+        };
+
+        socket.onopen = function(event) {
+            console.log("WebSocket connection established.");
+        };
+        
+        socket.onclose = function(event) {
+            console.log("WebSocket connection closed. Attempting to reconnect...");
+            // Optional: implement a reconnect logic
+        };
+
+        socket.onerror = function(error) {
+            console.error("WebSocket Error: ", error);
+        };
+
+        function updateMostTippedTripsTable(trips) {
+             const tbody = document.getElementById('mostTippedTripsTable').querySelector('tbody');
+            // Remove all existing rows
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            // Add all new rows
+            trips.forEach(trip => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trip.tpep_pickup_datetime}</td>
+                    <td>${trip.tpep_dropoff_datetime}</td>
+                    <td>${trip.passenger_count}</td>
+                    <td>${trip.trip_distance}</td>
+                    <td>${trip.fare_amount}</td>
+                    <td>${trip.tip_amount}</td>
+                    <td>${trip.total_amount}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    </script>
+
+</body>
+</html>
