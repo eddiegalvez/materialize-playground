@@ -178,14 +178,19 @@
             // Add all new rows
             trips.forEach(trip => {
                 const row = document.createElement('tr');
+                 // Format as USD currency
+                const fare = Number(trip.fare_amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+                const tip = Number(trip.tip_amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+                const total = Number(trip.total_amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+       
                 row.innerHTML = `
                     <td>${trip.tpep_pickup_datetime}</td>
                     <td>${trip.tpep_dropoff_datetime}</td>
-                    <td>${trip.passenger_count}</td>
+                    <td style="text-align:center;">${trip.passenger_count}</td>
                     <td>${trip.trip_distance}</td>
-                    <td>${trip.fare_amount}</td>
-                    <td>${trip.tip_amount}</td>
-                    <td>${trip.total_amount}</td>
+                    <td>${fare}</td>
+                    <td>${tip}</td>
+                    <td>${total}</td>
                 `;
                 tbody.appendChild(row);
             });
