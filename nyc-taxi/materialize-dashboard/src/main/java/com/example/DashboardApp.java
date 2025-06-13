@@ -5,7 +5,11 @@ import io.javalin.websocket.WsContext;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +23,9 @@ public class DashboardApp {
 
     // Manages active WebSocket connections
     private static final Map<String, WsContext> userUsernameMap = new ConcurrentHashMap<>();
+
+     // Map to hold location_id -> "Borough/Zone"
+    private static final Map<String, String> LOCATION_LOOKUP = new HashMap<>();
 
     public static void main(String[] args) {
         Javalin app = Javalin.create(config -> {
@@ -74,7 +81,7 @@ public class DashboardApp {
                             JSONArray data = new JSONArray();
 
                             while (rs.next()) {
-                                labels.put("Location " + rs.getLong("PULocationID"));
+                                labels.put(formatLocationId(String.valueOf(rs.getLong("PULocationID"))));
                                 data.put(rs.getLong("trip_count"));
                             }
 
@@ -158,8 +165,8 @@ public class DashboardApp {
                             while (rs.next()) {
                                 JSONObject trip = new JSONObject();
 
-                                 trip.put("pickup_location", rs.getString("pickup_location"));
-                                 trip.put("dropoff_location", rs.getString("dropoff_location"));
+                                 trip.put("pickup_location", formatLocationId(rs.getString("pickup_location")));
+                                 trip.put("dropoff_location", formatLocationId(rs.getString("dropoff_location")));
                                  trip.put("number_of_trips", rs.getInt("number_of_trips"));
                                  
                                  trips.put(trip); 
@@ -245,4 +252,34 @@ public class DashboardApp {
         thread.start();
     }
    
+    static {
+        // Load taxi_zone_lookup.csv from resources
+        try {
+            InputStream in = DashboardApp.class.getClassLoader().getResourceAsStream("taxi_zone_lookup.csv");
+            if (in == null) {
+                System.err.println("Could not find taxi_zone_lookup.csv in resources!");
+            } else {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+                    String line;
+                    boolean first = true;
+                    while ((line = reader.readLine()) != null) {
+                        if (first) { first = false; continue; } // skip header
+                        String[] parts = line.split(",");
+                        if (parts.length >= 4) {
+                            String borough = parts[1].trim().replace("\"", "");
+                            String zone = parts[2].trim().replace("\"", "");
+                            LOCATION_LOOKUP.put(parts[0], borough + "/" + zone);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load taxi_zone_lookup.csv: " + e.getMessage());
+        }
+    }
+
+    // Utility to format a location id as "Borough/Zone"
+    public static String formatLocationId(String locationId) {
+        return LOCATION_LOOKUP.getOrDefault(locationId, "Unknown/" + locationId);
+    }
 }
