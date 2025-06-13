@@ -7,12 +7,28 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
             background-color: #f0f2f5;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100vw;
+            min-height: 100vh;
+        }
+        .chart-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 32px;
+        }
+        .table-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 32px;
+            gap: 32px;
         }
         .chart-container {
             width: 80%;
@@ -21,6 +37,12 @@
             background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .table-row .chart-container {
+            width: 100%;
+            max-width: none;
+            flex: 1;
+            min-width: 0;
         }
         h1 {
             text-align: center;
@@ -31,31 +53,52 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
-    <div class="chart-container">
-        <h1>Busiest Taxi Pickup Locations (1s update)</h1>
-        <canvas id="busiestLocationsChart"></canvas>
-    </div>
-
-    <div class="chart-container" style="margin-top: 32px;">
-        <h1>Most Tipped Trips (Top 10)</h1>
-        <div style="overflow-x:auto;">
-            <table id="mostTippedTripsTable" style="width:100%; border-collapse:collapse;">
-                <thead>
-                    <tr>
-                        <th>Pickup Datetime</th>
-                        <th>Dropoff Datetime</th>
-                        <th>Passenger Count</th>
-                        <th>Trip Distance</th>
-                        <th>Fare Amount</th>
-                        <th>Tip Amount</th>
-                        <th>Total Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Data will be inserted here -->
-                </tbody>
-            </table>
+    <div class="main-container">
+        <div class="chart-row">
+            <div class="chart-container">
+                <h1>Busiest Taxi Pickup Locations (1s update)</h1>
+                <canvas id="busiestLocationsChart"></canvas>
+            </div>
+        </div>
+        <div class="table-row">
+            <div class="chart-container">
+                <h1>Most Tipped Trips</h1>
+                <div style="overflow-x:auto;">
+                    <table id="mostTippedTripsTable" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Pickup Datetime</th>
+                                <th>Dropoff Datetime</th>
+                                <th>Passenger Count</th>
+                                <th>Trip Distance</th>
+                                <th>Fare Amount</th>
+                                <th>Tip Amount</th>
+                                <th>Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h1>Most Popular Trips</h1>
+                <div style="overflow-x:auto;">
+                    <table id="popularTripsTable" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Pickup Location</th>
+                                <th>Dropoff Location</th>
+                                <th>Trip Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -107,6 +150,10 @@
                 updateMostTippedTripsTable(data.mostTippedTrips);
             }
 
+             if (data.popularTrips) {
+                updatePopularTripsTable(data.popularTrips);
+            }
+
         };
 
         socket.onopen = function(event) {
@@ -139,6 +186,22 @@
                     <td>${trip.fare_amount}</td>
                     <td>${trip.tip_amount}</td>
                     <td>${trip.total_amount}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updatePopularTripsTable(popularTrips) {
+            const tbody = document.getElementById('popularTripsTable').querySelector('tbody');
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            popularTrips.forEach(trip => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trip.pickup_location}</td>
+                    <td>${trip.dropoff_location}</td>
+                    <td>${trip.number_of_trips}</td>
                 `;
                 tbody.appendChild(row);
             });

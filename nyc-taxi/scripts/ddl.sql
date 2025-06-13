@@ -76,7 +76,7 @@ FROM
 -- Create a MATERIALIZED VIEW to get a real-time count of trips
 -- for the top 10 busiest pickup locations.
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS busiest_pickup_locations AS
+CREATE OR REPLACE MATERIALIZED VIEW busiest_pickup_locations AS
 SELECT
     "PULocationID",
     count(*) AS trip_count
@@ -86,10 +86,10 @@ GROUP BY
     "PULocationID"
 ORDER BY
     trip_count DESC
-LIMIT 10;
+LIMIT 7;
 
 -- Create a MATERIALIZED VIEW for a real-time display of the top tipped trips.
-CREATE MATERIALIZED VIEW IF NOT EXISTS top_tipped_trips AS
+CREATE OR REPLACE MATERIALIZED VIEW top_tipped_trips AS
 SELECT
     "tpep_pickup_datetime",
     "tpep_dropoff_datetime",
@@ -104,4 +104,19 @@ WHERE
     "tip_amount" > 0
 ORDER BY
     "tip_amount" DESC
-LIMIT 10;
+LIMIT 7;
+
+-- POPULAR TRIPS (the pickup-dropoff pairs with the most trips)
+CREATE OR REPLACE MATERIALIZED VIEW popular_trips AS
+SELECT
+    "PULocationID" AS "pickup_location",
+    "DOLocationID" AS "dropoff_location",
+    count(*) AS "number_of_trips"
+FROM
+    yellow_taxi_trips
+GROUP BY
+    "PULocationID",
+    "DOLocationID"
+ORDER BY
+    "number_of_trips" DESC
+LIMIT 7;

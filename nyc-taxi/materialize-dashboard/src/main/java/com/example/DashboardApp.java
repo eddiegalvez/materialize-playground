@@ -42,9 +42,11 @@ public class DashboardApp {
             });
         });
 
-        // Start a background thread to subscribe and process data
+        // Start background threads to subscribe and process data
+        // TODO look for a better pattern than one-thread-per-query
         startBusiestLocationThread();
         startTopTippingTripsThread();
+        startPopularTripsThread();
 
         System.out.println("Dashboard server started on http://localhost:7070");
     }
@@ -125,6 +127,55 @@ public class DashboardApp {
     //                     }
 
             
+                       
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Materialize SQLException: " + e.getMessage());
+                    System.exit(1);
+                    try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                } catch (Exception e) {
+                    System.err.println("An unexpected error occurred in data subscriber: " + e.getMessage());
+                    try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+     private static void startPopularTripsThread() {
+        Thread thread = new Thread(() -> {
+            while (running) {
+
+                try (Connection conn = DriverManager.getConnection(DB_URL, DB_PROPS)) {
+
+                    while (running) {
+
+                        String sql = "SELECT * FROM popular_trips ORDER BY number_of_trips DESC;";
+                        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+                            JSONArray trips = new JSONArray();
+                            
+                            while (rs.next()) {
+                                JSONObject trip = new JSONObject();
+
+                                 trip.put("pickup_location", rs.getString("pickup_location"));
+                                 trip.put("dropoff_location", rs.getString("dropoff_location"));
+                                 trip.put("number_of_trips", rs.getInt("number_of_trips"));
+                                 
+                                 trips.put(trip); 
+                            }
+
+                            JSONObject json = new JSONObject();
+                            json.put("popularTrips", trips);
+                            
+                            if (!userUsernameMap.isEmpty()) {
+                                for (WsContext ctx : userUsernameMap.values()) {
+                                    ctx.send(json.toString());
+                                }
+                            }
+                        }
+
+                        Thread.sleep(1000); // Polling interval            
                        
                     }
                 } catch (SQLException e) {
